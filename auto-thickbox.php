@@ -4,7 +4,7 @@ Plugin Name: Auto Thickbox
 Plugin URI: http://www.semiologic.com/software/auto-thickbox/
 Description: Automatically enables thickbox on thumbnail images (i.e. opens the images in a fancy pop-up).
 Author: Denis de Bernardy, Mike Koepke
-Version: 2.4.1
+Version: 2.5 dev
 Author URI: http://www.getsemiologic.com
 Text Domain: auto-thickbox
 Domain Path: /lang
@@ -20,8 +20,6 @@ This software is copyright Denis de Bernardy & Mike Koepke, and is distributed u
 **/
 
 
-load_plugin_textdomain('auto-thickbox', false, dirname(plugin_basename(__FILE__)) . '/lang');
-
 
 /**
  * auto_thickbox
@@ -33,26 +31,96 @@ class auto_thickbox {
 
 	protected $anchor_utils;
 
-    /**
-     * constructor()
-     */
+	/**
+	 * Plugin instance.
+	 *
+	 * @see get_instance()
+	 * @type object
+	 */
+	protected static $instance = NULL;
+
+	/**
+	 * URL to this plugin's directory.
+	 *
+	 * @type string
+	 */
+	public $plugin_url = '';
+
+	/**
+	 * Path to this plugin's directory.
+	 *
+	 * @type string
+	 */
+	public $plugin_path = '';
+
+	/**
+	 * Access this plugin’s working instance
+	 *
+	 * @wp-hook plugins_loaded
+	 * @return  object of this class
+	 */
+	public static function get_instance()
+	{
+		NULL === self::$instance and self::$instance = new self;
+
+		return self::$instance;
+	}
+
+	/**
+	 * Loads translation file.
+	 *
+	 * Accessible to other classes to load different language files (admin and
+	 * front-end for example).
+	 *
+	 * @wp-hook init
+	 * @param   string $domain
+	 * @return  void
+	 */
+	public function load_language( $domain )
+	{
+		load_plugin_textdomain(
+			$domain,
+			FALSE,
+			$this->plugin_path . 'lang'
+		);
+	}
+
+	/**
+	 * Constructor.
+	 *
+	 *
+	 */
 	public function __construct() {
-        if ( !is_admin() && isset($_SERVER['HTTP_USER_AGENT']) &&
-            	strpos($_SERVER['HTTP_USER_AGENT'], 'W3C_Validator') === false) {
+		$this->plugin_url    = plugins_url( '/', __FILE__ );
+		$this->plugin_path   = plugin_dir_path( __FILE__ );
+		$this->load_language( 'auto-thickbox' );
 
-        	if ( !class_exists('anchor_utils') )
-        		include dirname(__FILE__) . '/anchor-utils/anchor-utils.php';
-
-	        $this->anchor_utils = new anchor_utils( true );
-
-        	add_action('wp_enqueue_scripts', array($this, 'scripts'));
-        	add_action('wp_enqueue_scripts', array($this, 'styles'));
-
-        	add_action('wp_footer', array($this, 'thickbox_images'), 20);
-
-        	add_filter('filter_anchor', array($this, 'filter'));
-        }
+		add_action( 'plugins_loaded', array ( $this, 'init' ) );
     } #auto_thickbox
+
+	/**
+	 * init()
+	 *
+	 * @return void
+	 **/
+
+	function init() {
+		if ( !is_admin() && isset($_SERVER['HTTP_USER_AGENT']) &&
+      	strpos($_SERVER['HTTP_USER_AGENT'], 'W3C_Validator') === false) {
+
+			if ( !class_exists('anchor_utils') )
+			    include $this->plugin_path . '/anchor-utils/anchor-utils.php';
+
+			$this->anchor_utils = new anchor_utils( true );
+
+			add_action('wp_enqueue_scripts', array($this, 'scripts'));
+			add_action('wp_enqueue_scripts', array($this, 'styles'));
+
+			add_action('wp_footer', array($this, 'thickbox_images'), 20);
+
+			add_filter('filter_anchor', array($this, 'filter'));
+		}
+	}
 
     /**
 	 * filter()
@@ -177,4 +245,4 @@ EOS;
 	} # thickbox_images()
 } # auto_thickbox
 
-$auto_thickbox = new auto_thickbox();
+$auto_thickbox = auto_thickbox::get_instance();
